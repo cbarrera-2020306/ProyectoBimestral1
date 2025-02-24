@@ -1,0 +1,35 @@
+{
+  "name": "proyectobimestral1",
+  "version": "1.0.0",
+  "description": "Proyecto del Primer Bimestre",
+  "homepage": "https://github.com/cbarrera-2020306/ProyectoBimestral1#readme",
+  "bugs": {
+    "url": "https://github.com/cbarrera-2020306/ProyectoBimestral1/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/cbarrera-2020306/ProyectoBimestral1.git"
+  },
+  "license": "MIT",
+  "author": "CB (Christopher Barrera)",
+  "type": "commonjs",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "node --watch index.js"
+  },
+  "dependencies": {
+    "argon2": "^0.41.1",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "express-rate-limit": "^7.5.0",
+    "express-validator": "^7.2.1",
+    "extname": "^0.1.5",
+    "helmet": "^8.0.0",
+    "jsonwebtoken": "^9.0.2",
+    "mongoose": "^8.10.1",
+    "morgan": "^1.10.0",
+    "multer": "^1.4.5-lts.1"
+  }
+}
