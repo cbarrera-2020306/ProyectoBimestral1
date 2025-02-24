@@ -1,7 +1,7 @@
 // Conexion a la BD 
 import mongoose from "mongoose";
 import {initializeAdminUser} from "./init.admin.js"
-import { initializeCategory } from "./init.category.js";
+// import { initializeCategory } from "./init.category.js";
 
 export const connect = async () => {
     try {
@@ -18,7 +18,7 @@ export const connect = async () => {
         mongoose.connection.on('open',async ()=>{
             console.log('MongoDB |connected to database')
             await initializeAdminUser()
-            initializeCategory()
+            // initializeCategory()
         })
         mongoose.connection.on('recconnected', ()=>{
             console.log('MongoDB | reconnected to mongodb')
