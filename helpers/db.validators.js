@@ -1,7 +1,7 @@
 // Validaciones en relacion a la bd 
 
 import User from "../src/user/user.model.js";
-// import Category from "../src/category/category.model.js"
+import Category from "../src/category/category.model.js"
 
 export const existUserName = async (username) => {
     const alreadyUsername = await User.findOne({username: username})
