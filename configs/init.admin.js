@@ -9,7 +9,7 @@ export const initializeAdminUser = async () => {
         const AdminUser = new User({
             name: "Christopher",
             surname: "Barrera",
-            username: "chris06",
+            username: "cbarrera-2020306",
             email: "cbarrera-2020306@kinal.edu.gt",
             password: await encrypt("2025Kinal!"),
             phone: "09218734",

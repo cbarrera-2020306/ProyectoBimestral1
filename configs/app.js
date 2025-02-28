@@ -22,7 +22,6 @@ const configs = (app)=>{
 }
 
 const routes = (app)=>{
-    // app.use(userRoutes)
     //Buenas practicas de rutas
             //pre ruta general
     app.use('/v1/user', userRoutes)
