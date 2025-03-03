@@ -37,7 +37,18 @@ export const validateJwt = async (req, res, next) => {
 export const validateClient = (req, res, next) => {
     try {
         if (req.user.role !== "CLIENT") {
-            return res.status(403).json({ message: "Access denied. Only clients can create appointments" });
+            return res.status(403).json({ message: "Access denied" });
+        }
+        next();
+    } catch (err) {
+        console.error("Role validation error:", err);
+        return res.status(500).json({ message: "Error validating role" });
+    }
+};
+export const validateAdmin = (req, res, next) => {
+    try {
+        if (req.user.role !== "ADMIN") {
+            return res.status(403).json({ message: "Access denied." });
         }
         next();
     } catch (err) {

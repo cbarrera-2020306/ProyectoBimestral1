@@ -1,7 +1,7 @@
 // Rutas de funciones de usuario
 import { Router } from "express"
 import { deleteUser, get, getAll, update, updatePassword,login, register, test } from "./user.controller.js"
-import { validateJwt} from '../../middlewares/validate.jwt.js'
+import { validateAdmin, validateJwt} from '../../middlewares/validate.jwt.js'
 import { PasswordValidator, updateValidator, LoginValidator, registerValidator } from "../../helpers/validators.js"
 import { uploadProfilePicture } from "../../middlewares/multer.uploads.js";
 import { deleteFileError } from "../../middlewares/delete.file.on.errors.js";
@@ -22,22 +22,22 @@ api.post('/login',[LoginValidator], login)
 
 //Rutas privadas
                 //Middleware
-api.get('/test', validateJwt, test)
+api.get('/test',[validateJwt, validateAdmin], test)
 
 // Rutas privadas
 api.get(
     '/', 
-    [validateJwt],
+    [validateJwt, validateAdmin],
     getAll
 )
 api.get(
     '/:id', 
-    [validateJwt], 
+    [validateJwt, validateAdmin], 
     get
 )
 api.put(
     '/:id',
-    [updateValidator],
+    [validateJwt, validateAdmin,updateValidator],
     update
 )
 api.put(
@@ -47,6 +47,7 @@ api.put(
 )
 api.delete(
     '/:id',
+    validateJwt,
     deleteUser
 )
 

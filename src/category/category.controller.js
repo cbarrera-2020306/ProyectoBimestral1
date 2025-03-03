@@ -1,5 +1,5 @@
 import Category from "./category.model.js";
-import Publication from "../publication/publication.model.js"
+import Product from "../product/product.model.js"
 import { existCategoryName } from "../../helpers/db.validators.js";
 
 
@@ -76,39 +76,6 @@ export const updateCategory = async (req, res) => {
     }
 };
 
-
-//  Desactivar una categoría en lugar de eliminarla (Solo Admin)
- 
-// export const deleteCategory = async (req, res) => {
-//     try {
-//         const { id } = req.params;
-
-//         // Buscar y eliminar la categoría por su ID
-//         const category = await Category.findByIdAndDelete(id);
-
-//         if (!category) {
-//             return res.status(404).send({ 
-//                 success: false, 
-//                 message: "Category not found" 
-//             });
-//         }
-
-//         res.send({ 
-//             success: true, 
-//             message: "Category deleted successfully", 
-//             category 
-//         });
-
-//     } catch (err) {
-//         console.error(" Error deleting category:", err);
-//         res.status(500).send({ 
-//             success: false, 
-//             message: "Error deleting category", 
-//             error: err.message || err 
-//         });
-//     }
-// };
-
 export const deleteCategory = async (req, res) => {
     const { id } = req.params;
 
@@ -130,13 +97,13 @@ export const deleteCategory = async (req, res) => {
             return res.status(500).send({ success: false, message: "Default category not found. Please ensure it exists." });
         }
 
-        // Actualizar los publications (posts) que usaban la categoría eliminada
-        await Publication.updateMany({ category: id }, { category: defaultCategory._id });
+        // Actualizar los productos que usaban la categoría eliminada
+        await Product.updateMany({ category: id }, { category: defaultCategory._id });
 
         // Eliminar la categoría
         await Category.findByIdAndDelete(id);
 
-        res.send({ success: true, message: "Category deleted successfully, and publications reassigned to default category" });
+        res.send({ success: true, message: "Category deleted successfully, and products reassigned to default category" });
 
     } catch (err) {
         console.error("Error deleting category:", err);

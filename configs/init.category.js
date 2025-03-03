@@ -10,7 +10,7 @@ export const initializeCategory = async () => {
             // Crear la categoría por defecto si no existe
             const category = new Category({
                 name: "GENERAL",
-                description: "Categoria para temas generales"
+                description: "Default category"
             });
 
             await category.save();

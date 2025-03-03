@@ -1,8 +1,7 @@
 import { Router } from "express"
-import { verifyAdmin } from "../../middlewares/auth.middleware.js"
 import { protectDefaultCategory } from "../../middlewares/validations.defaults.js"
 import { getCategories, getCategoryById, createCategory, updateCategory, deleteCategory } from "./category.controller.js"
-import { validateJwt } from "../../middlewares/validate.jwt.js"
+import { validateJwt, validateAdmin } from "../../middlewares/validate.jwt.js"
 
 const api = Router()
 
@@ -18,23 +17,21 @@ api.get(
 
 api.post(
     "/register", 
-    [validateJwt],
-    verifyAdmin, 
+    [validateJwt, validateAdmin], 
     createCategory
 )
 
 api.put(
     "/update/:id", 
-    [validateJwt],
-    verifyAdmin, 
+    [validateJwt, validateAdmin], 
     updateCategory
 )
 
 api.delete(
     "/delete/:id", 
-    [validateJwt],
-    verifyAdmin, 
+    [validateJwt, validateAdmin],
     protectDefaultCategory, 
     deleteCategory
 )
+
 export default api
