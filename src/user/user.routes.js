@@ -3,8 +3,9 @@ import { Router } from "express"
 import { deleteUser, get, getAll, update, updatePassword,login, register, test } from "./user.controller.js"
 import { validateAdmin, validateJwt} from '../../middlewares/validate.jwt.js'
 import { PasswordValidator, updateValidator, LoginValidator, registerValidator } from "../../helpers/validators.js"
-import { uploadProfilePicture } from "../../middlewares/multer.uploads.js";
+// import { uploadProfilePicture } from "../../middlewares/multer.uploads.js";
 import { deleteFileError } from "../../middlewares/delete.file.on.errors.js";
+import { validateAdminRole, validateDeleteUser, validateLogin, validatePagination, validateRegister, validateUpdatePassword, validateUpdateUser } from "../../middlewares/validate.users.js";
 
 
 const api = Router()
@@ -12,13 +13,14 @@ const api = Router()
 // Rutas publicas
 api.post('/register',
     [
-        uploadProfilePicture.single('profilePicture'),
+        // uploadProfilePicture.single('profilePicture'),
+        validateRegister,
         registerValidator,
         deleteFileError
     ],
     register)
 
-api.post('/login',[LoginValidator], login)
+api.post('/login',[LoginValidator, validateLogin], login)
 
 //Rutas privadas
                 //Middleware
@@ -27,27 +29,30 @@ api.get('/test',[validateJwt, validateAdmin], test)
 // Rutas privadas
 api.get(
     '/', 
-    [validateJwt, validateAdmin],
+    [validateJwt, validateAdminRole, validatePagination],
     getAll
 )
 api.get(
     '/:id', 
-    [validateJwt, validateAdmin], 
+    [validateJwt, validateAdminRole], 
     get
 )
 api.put(
-    '/:id',
-    [validateJwt, validateAdmin,updateValidator],
+    '/:id', 
+    [validateJwt, validateUpdateUser, updateValidator],
     update
 )
 api.put(
-    '/:id/password',
-    [PasswordValidator],
+    '/password/:id', 
+    [
+        validateJwt, 
+        validateUpdatePassword
+    ],
     updatePassword
 )
 api.delete(
-    '/:id',
-    validateJwt,
+    '/:id', 
+    [validateJwt, validateDeleteUser], 
     deleteUser
 )
 

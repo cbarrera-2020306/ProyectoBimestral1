@@ -2,12 +2,12 @@
 import { Router } from 'express'
 import { getCart, addToCart, removeFromCart, clearCart } from '../cart/cart.controller.js'
 import { validateClient, validateJwt } from "../../middlewares/validate.jwt.js"
-
+import {validateUser, validateProductsArray, validateProductStock, validateCartExists} from '../../middlewares/validations.cart.js'
 const api = Router()
 
-api.get('/', [validateJwt, validateClient], getCart)
-api.post('/add', [validateJwt, validateClient], addToCart)
-api.delete('/remove/:productId', [validateJwt, validateClient], removeFromCart)
-api.delete('/clear', [validateJwt, validateClient], clearCart)
+api.get('/', [validateJwt,validateUser, validateCartExists], getCart)
+api.post('/add', [validateJwt, validateUser, validateProductsArray, validateProductStock, validateCartExists], addToCart)
+api.delete('/remove/', [validateJwt,validateUser, validateProductsArray, validateCartExists], removeFromCart)
+api.post('/clear', [validateJwt,validateUser, validateCartExists], clearCart)
 
 export default api;

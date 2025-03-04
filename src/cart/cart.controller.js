@@ -1,122 +1,92 @@
-// cart.controller.js
 import Cart from './cart.model.js'
 import Product from '../product/product.model.js'
 
-// Agregar producto al carrito
 export const addToCart = async (req, res) => {
     try {
-        const userId = req.user.id; // Obtener ID del usuario desde el token
-        const { productId, quantity } = req.body
+        const { products } = req.body
+        const cart = req.cart
 
-        const product = await Product.findById(productId)
-        if (!product) return res.status(404).send({ message: 'Product not found' })
+        for (const { productId, quantity } of products) {
+            const existingProduct = cart.products.find(p => p.product.equals(productId))
 
-        // Verificar si hay suficiente stock
-        if (product.stock < quantity) {
-            return res.status(400).send({ message: `Not enough stock. Only ${product.stock} available.` })
-        }
-
-        let cart = await Cart.findOne({ user: userId })
-        if (!cart) {
-            cart = new Cart({ user: userId, products: [] })
-        }
-
-        const existingProduct = cart.products.find(item => item.product.equals(productId))
-        if (existingProduct) {
-            existingProduct.quantity += quantity
-        } else {
-            cart.products.push({ product: productId, quantity })
+            if (existingProduct) {
+                existingProduct.quantity += quantity
+            } else {
+                // Asegurarte de que el producto se guarda con el ID correcto
+                cart.products.push({ product: productId, quantity })
+            }
         }
 
         cart.updatedAt = Date.now()
         await cart.save()
-        return res.status(200).send({ message: 'Product added to cart', cart })
+
+        // Refrescar el carrito y hacer el populate para obtener la información completa del producto
+        const populatedCart = await Cart.findById(cart._id)
+            .populate({ path: 'products.product', select: 'name price stock' }) // Poblar el campo 'product'
+            .select('-__v')
+
+        return res.status(200).send({ message: "Products added to cart", cart: populatedCart })
     } catch (err) {
-        console.error(err)
-        return res.status(500).send({ message: 'Error adding product to cart', err })
+        return res.status(500).send({ message: "Error adding products to cart", err })
     }
 }
 
-// Ver carrito del usuario (solo el dueño del carrito)
 export const getCart = async (req, res) => {
     try {
-        const userId = req.user.id // Obtener usuario desde el token
+        const cart = req.cart
 
-        const cart = await Cart.findOne({ user: userId }).populate('products.product', 'name price')
-        if (!cart) return res.status(404).send({ message: 'Cart not found' })
-
-        // Verificación de que el usuario autenticado es el dueño del carrito
-        if (cart.user.toString() !== userId) {
-            return res.status(403).send({ message: 'Unauthorized: This cart does not belong to you' })
+        if (cart.products.length === 0) {
+            return res.status(200).send({ message: 'El carrito está vacío.' })
         }
 
-        return res.status(200).send({ message: 'Cart retrieved', cart })
+        return res.status(200).send({ message: 'Carrito recuperado', cart })
     } catch (err) {
-        console.error(err)
-        return res.status(500).send({ message: 'Error retrieving cart', err })
+        return res.status(500).send({ message: 'Error al recuperar el carrito', err })
     }
-};
+}
 
-// Eliminar una cantidad de un producto o su totalidad del carrito 
-export const removeFromCart = async (req, res) => {
-    try {
-        const userId = req.user.id
-        const { productId, quantity } = req.body 
-
-        // Buscar el carrito del usuario
-        const cart = await Cart.findOne({ user: userId })
-        if (!cart) return res.status(404).send({ message: 'Cart not found' })
-
-        // Verificación de propiedad del carrito
-        if (cart.user.toString() !== userId) {
-            return res.status(403).send({ message: 'Unauthorized: You can only modify your own cart' })
-        }
-
-        // Buscar el producto dentro del carrito
-        const productIndex = cart.products.findIndex(item => item.product.equals(productId))
-
-        if (productIndex === -1) {
-            return res.status(404).send({ message: 'Product not found in cart' })
-        }
-
-        // Reducir la cantidad o eliminar el producto completamente si es necesario
-        if (quantity >= cart.products[productIndex].quantity) {
-            // Si la cantidad a eliminar es igual o mayor, quitar el producto del carrito
-            cart.products.splice(productIndex, 1);
-        } else {
-            // Si la cantidad a eliminar es menor, solo restar
-            cart.products[productIndex].quantity -= quantity
-        }
-
-        cart.updatedAt = Date.now();
-        await cart.save();
-
-        return res.status(200).send({ message: 'Product quantity updated in cart', cart })
-    } catch (err) {
-        console.error(err)
-        return res.status(500).send({ message: 'Error removing product from cart', err })
-    }
-};
-
-
-// Vaciar carrito (solo el dueño del carrito)
 export const clearCart = async (req, res) => {
     try {
-        const userId = req.user.id // Obtener usuario desde el token
-        const cart = await Cart.findOne({ user: userId })
-
-        if (!cart) return res.status(404).send({ message: 'Cart not found' })
-
-        // Verificación de propiedad del carrito
-        if (cart.user.toString() !== userId) {
-            return res.status(403).send({ message: 'Unauthorized: You can only clear your own cart' })
-        }
-
-        await Cart.findOneAndDelete({ user: userId })
-
-        return res.status(200).send({ message: 'Cart cleared' })
+      const userId = req.user.uid
+      const cart = await Cart.findOne({ user: userId })
+  
+      if (!cart) return res.status(404).send({ message: 'El usuario no tiene un carrito de compras en este momento.' })
+  
+      // Vaciar el carrito en lugar de eliminarlo
+      cart.products = []
+      await cart.save()
+  
+      return res.status(200).send({ message: 'El carrito ha sido vaciado exitosamente.' })
     } catch (err) {
-        console.error(err)
-        return res.status(500).send({ message: 'Error clearing cart', err })
+      console.error("Error al vaciar el carrito:", err)
+      return res.status(500).send({ message: 'Error al vaciar el carrito', err })
     }
-};
+}
+
+export const removeFromCart = async (req, res) => {
+    try {
+        const { cart } = req
+        const { products } = req.body
+
+        // Recorrer los productos enviados para eliminarlos o actualizar cantidades
+        products.forEach(({ productId, quantity }) => {
+            const productIndex = cart.products.findIndex(item => item.product.equals(productId))
+
+            if (productIndex !== -1) {
+                if (quantity >= cart.products[productIndex].quantity) {
+                    cart.products.splice(productIndex, 1) // Eliminar el producto
+                } else {
+                    cart.products[productIndex].quantity -= quantity // Reducir cantidad
+                }
+            }
+        })
+
+        cart.updatedAt = Date.now()
+        await cart.save()
+
+        return res.status(200).send({ message: 'Productos actualizados en el carrito', cart })
+    } catch (err) {
+        console.error("Error al actualizar el carrito:", err)
+        return res.status(500).send({ message: 'Error al actualizar el carrito', error: err })
+    }
+}

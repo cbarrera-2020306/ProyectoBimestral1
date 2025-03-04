@@ -1,10 +1,47 @@
 import Product from "./product.model.js";
+import Category from "../category/category.model.js";
 
 export const addProduct = async (req, res) => {
     try {
-        let data = req.body;
-        let product = new Product(data);
+        let { name, price, categoryId, stock, description, isBestSeller } = req.body;
+
+        // Validaciones
+        if (!description) {
+            return res.status(400).send({ message: "Product description is required" });
+        }
+
+        if (!stock || stock < 0) {
+            return res.status(400).send({ message: "Stock must be a positive number" });
+        }
+
+        // Buscar la categoría por ID
+        let category = await Category.findById(categoryId);
+        if (!category) {
+            return res.status(404).send({ message: "Category not found" });
+        }
+
+        // Buscar si el producto ya existe en la misma categoría
+        let existingProduct = await Product.findOne({ name, category: categoryId });
+
+        if (existingProduct) {
+            existingProduct.stock += stock;
+            await existingProduct.save();
+            return res.send({ message: "Stock updated successfully", product: existingProduct });
+        }
+
+        // Crear nuevo producto con el nombre de la categoría
+        let product = new Product({
+            name,
+            price,
+            category: categoryId,
+            categoryName: category.name, // Guardar el nombre de la categoría
+            stock,
+            description,
+            isBestSeller
+        });
+
         await product.save();
+
         return res.send({ message: "Product added successfully", product });
     } catch (err) {
         console.error(err);
@@ -12,19 +49,21 @@ export const addProduct = async (req, res) => {
     }
 };
 
+
+
 export const getProducts = async (req, res) => {
     try {
         const { name, category, bestSellers, sortAZ, sortZA, sortPriceAsc, sortPriceDesc } = req.query;
         let filter = {};
 
-        // Filtro por nombre (búsqueda insensible a mayúsculas/minúsculas)
+        // Filtro por nombre (insensible a mayúsculas/minúsculas)
         if (name) {
             filter.name = { $regex: new RegExp(name, 'i') };
         }
 
-        // Filtro por categoría (búsqueda insensible a mayúsculas/minúsculas)
+        // Filtro por categoría usando categoryName en lugar de categoryId
         if (category) {
-            filter.category = { $regex: new RegExp(category, 'i') };
+            filter.categoryName = { $regex: new RegExp(category, 'i') };
         }
 
         // Filtro para los productos más vendidos
@@ -44,10 +83,9 @@ export const getProducts = async (req, res) => {
         return res.send(products);
     } catch (err) {
         console.error(err);
-        return res.status(500).send({ message: 'Error retrieving products' });
+        return res.status(500).send({ message: 'Error retrieving products', err });
     }
 };
-
 
 export const getProductById = async (req, res) => {
     try {
@@ -64,14 +102,31 @@ export const getProductById = async (req, res) => {
 export const updateProduct = async (req, res) => {
     try {
         let { id } = req.params;
-        let updatedProduct = await Product.findByIdAndUpdate(id, req.body, { new: true });
+        let { categoryId } = req.body;
+
+        let updateData = { ...req.body };
+
+        // Si se actualiza la categoría, también hay que actualizar el nombre
+        if (categoryId) {
+            let category = await Category.findById(categoryId);
+            if (!category) {
+                return res.status(404).send({ message: "Category not found" });
+            }
+            updateData.categoryName = category.name;
+        }
+
+        let updatedProduct = await Product.findByIdAndUpdate(id, updateData, { new: true });
+
         if (!updatedProduct) return res.status(404).send({ message: "Product not found" });
+
         return res.send({ message: "Product updated", updatedProduct });
     } catch (err) {
         console.error(err);
         return res.status(500).send({ message: "Error updating product", err });
     }
 };
+
+
 
 export const deleteProduct = async (req, res) => {
     try {

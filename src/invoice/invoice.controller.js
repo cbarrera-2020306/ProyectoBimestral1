@@ -1,63 +1,100 @@
-import Invoice from './invoice.model.js';
-import Product from '../product/product.model.js';
-import User from '../user/user.model.js';
-import Cart from '../cart/cart.model.js';
+import Invoice from './invoice.model.js'
+import Cart from '../cart/cart.model.js'
+import User from '../user/user.model.js' // Importamos el modelo de usuario
+import Product from '../product/product.model.js'
 
 export const createInvoice = async (req, res) => {
     try {
-        const userId = req.user.id // Obtener ID del usuario desde el token
+        const userId = req.user.uid // ID del usuario autenticado
 
-        // Buscar el carrito del usuario y poblar los productos
-        const cart = await Cart.findOne({ user: userId }).populate('products.product')
+        // Obtener datos del usuario
+        const user = await User.findById(userId)
+        if (!user) return res.status(404).send({ message: "User not found" })
+
+        const userName = user.name // Nombre del usuario
+
+        // Buscar el carrito del usuario
+        const cart = await Cart.findOne({ user: userId }).populate({
+            path: 'products.product',
+            select: 'name price stock'
+        })
+
         if (!cart || cart.products.length === 0) {
             return res.status(400).send({ message: 'Your cart is empty' })
         }
 
+        // Verificar stock disponible
+        for (const item of cart.products) {
+            if (item.quantity > item.product.stock) {
+                return res.status(400).send({ 
+                    message: `Not enough stock for product: ${item.product.name}`
+                })
+            }
+        }
+
+        // Contar cuántas facturas tiene el usuario
+        const userInvoicesCount = await Invoice.countDocuments({ user: userId })
+        const purchaseNumber = userInvoicesCount + 1
+
         // Calcular subtotales y total
         let total = 0
-        const invoiceProducts = cart.products.map(item => {
+        const invoiceProducts = []
+
+        for (const item of cart.products) {
             const subtotal = item.product.price * item.quantity
             total += subtotal
-            return {
+            invoiceProducts.push({
                 productId: item.product._id,
                 name: item.product.name,
                 price: item.product.price,
                 quantity: item.quantity,
                 subtotal
-            }
-        })
+            })
 
-        // Crear la factura
+            // Restar del stock
+            await Product.findByIdAndUpdate(item.product._id, {
+                $inc: { stock: -item.quantity }
+            })
+        }
+
+        // Crear la factura con el ID y nombre del usuario
         const invoice = new Invoice({
             user: userId,
+            userName,
+            purchaseNumber,
             products: invoiceProducts,
             total,
-            status: 'PAID'  // La factura se genera solo si se paga
+            status: 'PAID'
         })
 
         await invoice.save()
 
-        // Vaciar el carrito del usuario después de generar la factura
+        // Vaciar el carrito después de generar la factura
         await Cart.findOneAndDelete({ user: userId })
 
-        return res.status(201).send({ message: 'Invoice created successfully', invoice })
+        return res.status(201).send({ 
+            message: `Invoice created successfully. Purchase number: ${purchaseNumber}`, 
+            invoice 
+        })
     } catch (err) {
-        console.error(err)
+        console.error("Error creating invoice:", err)
         return res.status(500).send({ message: 'Error creating invoice', err })
     }
 }
 
-
 // Obtener todas las facturas
 export const getAllInvoices = async (req, res) => {
     try {
-        const invoices = await Invoice.find().populate('user', 'name username').populate('products.product', 'name price');
-        if (invoices.length === 0) return res.status(404).send({ message: 'No invoices found' });
+        const invoices = await Invoice.find()
+            .populate('user', 'name') // Solo trae el nombre del usuario
+            .select('user purchaseNumber status') // Solo trae el número de factura y el estado
+
+        if (!invoices.length) return res.status(404).send({ message: 'No invoices found' });
 
         return res.send({ message: 'Invoices retrieved successfully', invoices });
     } catch (err) {
         console.error(err);
-        return res.status(500).send({ message: 'General error retrieving invoices', err });
+        return res.status(500).send({ message: 'Error retrieving invoices', err });
     }
 };
 
@@ -66,7 +103,9 @@ export const getUserInvoices = async (req, res) => {
     try {
         const { userId } = req.params // Obtener el ID del usuario desde los parámetros
 
-        const invoices = await Invoice.find({ user: userId }).populate('user', 'name email')
+        const invoices = await Invoice.find({ user: userId })
+        .populate('user', 'name ')
+        .select('user purchaseNumber status')
 
         if (!invoices.length) return res.status(404).send({ message: 'No invoices found for this user' })
 
@@ -77,12 +116,14 @@ export const getUserInvoices = async (req, res) => {
     }
 }
 
-// Ver productos detallados de una factura
+// Ver detalles de una factura específica
 export const getInvoiceDetails = async (req, res) => {
     try {
-        const { invoiceId } = req.params // Obtener ID de la factura desde la URL
+        const { invoiceId } = req.params // Obtener el ID de la factura desde los parámetros
 
-        const invoice = await Invoice.findById(invoiceId).populate('products.product', 'name price')
+        const invoice = await Invoice.findById(invoiceId)
+            .populate('user', 'name') // Obtener solo el nombre del usuario
+            .select('-userName -__v')
 
         if (!invoice) return res.status(404).send({ message: 'Invoice not found' })
 
@@ -92,7 +133,6 @@ export const getInvoiceDetails = async (req, res) => {
         return res.status(500).send({ message: 'Error retrieving invoice details', err })
     }
 }
-
 
 // Actualizar factura (validación de stock incluida)
 export const updateInvoice = async (req, res) => {

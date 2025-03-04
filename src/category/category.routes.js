@@ -1,35 +1,40 @@
 import { Router } from "express"
 import { protectDefaultCategory } from "../../middlewares/validations.defaults.js"
 import { getCategories, getCategoryById, createCategory, updateCategory, deleteCategory } from "./category.controller.js"
-import { validateJwt, validateAdmin } from "../../middlewares/validate.jwt.js"
+import { validateJwt} from "../../middlewares/validate.jwt.js"
+import { validateAdminRole, validateCategoryCreation, validateCategoryDeletion, validateCategoryExists, validateCategoryPagination, validateCategoryUpdate } from "../../middlewares/validations.category.js"
 
 const api = Router()
 
 api.get(
     "/", 
+    validateJwt,
+    validateCategoryPagination,
     getCategories
 )
 
 api.get(
-    "/:id", 
+    "/:id",
+    validateJwt,
+    validateCategoryExists,
     getCategoryById
 )
 
 api.post(
     "/register", 
-    [validateJwt, validateAdmin], 
+    [validateJwt, validateAdminRole, validateCategoryCreation], 
     createCategory
 )
 
 api.put(
     "/update/:id", 
-    [validateJwt, validateAdmin], 
+    [validateJwt, validateAdminRole, validateCategoryUpdate], 
     updateCategory
 )
 
 api.delete(
     "/delete/:id", 
-    [validateJwt, validateAdmin],
+    [validateJwt, validateAdminRole, validateCategoryDeletion],
     protectDefaultCategory, 
     deleteCategory
 )

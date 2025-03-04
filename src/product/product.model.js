@@ -21,16 +21,21 @@ const productSchema = new Schema({
         min: [0, "Stock can't be negative"]
     },
     category: {
-        type: String,
+        type: Schema.Types.ObjectId, // Se guarda la referencia a la categoría
+        ref: "Category",
         required: [true, "Product category is required"]
+    },
+    categoryName: {
+        type: String, // Se guarda el nombre de la categoría
+        required: true
     },
     isBestSeller: {
         type: Boolean,
-        default: false // Por defecto, los productos no son más vendidos
+        default: false
     },
     salesCount: {
         type: Number,
-        default: 0, // Contador de ventas para determinar los más vendidos
+        default: 0,
         min: [0, "Sales count can't be negative"]
     }
 });
